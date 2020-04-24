@@ -17,6 +17,7 @@ static const CGFloat KJHalfScreenPresenterAnimationDuration = 0.25f;
 @property (assign, nonatomic) BOOL isPresenting;
 @property (assign, nonatomic) KJHalfScreenPresenterAnimation animation;
 @property (assign, nonatomic) CGFloat duration;
+@property (strong, nonatomic) UIViewController *presentedViewController;
 
 @end
 
@@ -65,6 +66,9 @@ static const CGFloat KJHalfScreenPresenterAnimationDuration = 0.25f;
     if ([presentingViewController.presentedViewController isKindOfClass:presentedViewController.class]) {
         return;
     }
+    
+    self.presentedViewController = presentedViewController;
+    
     [presentingViewController presentViewController:presentedViewController
                                            animated:YES
                                          completion:nil];
@@ -91,6 +95,8 @@ static const CGFloat KJHalfScreenPresenterAnimationDuration = 0.25f;
 {
     self.isPresenting = YES;
     
+    [self observeKeyboardChanges];
+    
     return self;
 }
 
@@ -98,7 +104,38 @@ static const CGFloat KJHalfScreenPresenterAnimationDuration = 0.25f;
 {
     self.isPresenting = NO;
     
+    [self stopObservingKeyboard];
+    
     return self;
+}
+
+- (void)observeKeyboardChanges {
+    //[self stopObservingKeyboard];
+    //[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didReceiveKeyboardWillChangeFrameNotification:) name:UIKeyboardWillShowNotification object:nil];
+}
+
+- (void)stopObservingKeyboard {
+    //[[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardWillShowNotification object:nil];
+}
+
+- (void)didReceiveKeyboardWillChangeFrameNotification:(NSNotification*)notification {
+    if (!self.isPresenting || self.animation != KJHalfScreenPresenterAnimationBottomToHalf) {
+        return;
+    }
+    UIView *view = self.presentedViewController.view;
+    
+    //check to see if view has already moved up
+    if (view.frame.origin.y < ([UIScreen mainScreen].bounds.size.height/2)-5) {
+        return;
+    }
+    
+    CGSize keyboardSize = [[[notification userInfo] objectForKey:UIKeyboardFrameBeginUserInfoKey] CGRectValue].size;
+    
+    [UIView animateWithDuration:0.3 animations:^{
+        CGRect frame = view.frame;
+        frame.origin.y = frame.origin.y-keyboardSize.height;
+        view.frame = frame;
+    }];
 }
 
 #pragma mark - UIViewControllerAnimatedTransitioning protocol
